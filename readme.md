@@ -1,3 +1,7 @@
+# **Remote Unlock for Moonlight and Sunshine**
+
+This repository provides an AutoHotkey-based solution for setting up remote unlock functionality between a Windows client PC (running Moonlight) and a Sunshine server PC. The scripts are designed to create a smooth and (mostly) secure way to unlock your Sunshine server PC remotely.
+
 ## **Table of Contents**
 - [Disclaimers](#disclaimers)
 - [How It Works](#how-it-works)
