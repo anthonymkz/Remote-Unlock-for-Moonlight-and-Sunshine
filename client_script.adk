@@ -1,0 +1,62 @@
+#Requires AutoHotkey v2.0
+
+; Configuration - Update these placeholders
+Correct_PIN_Hash := "<MD5_HASH_OF_YOUR_PIN>" ; Replace with your MD5 hash
+RDP_File := "<PATH_TO_YOUR_SAVED_RDP_FILE>" ; Replace with the path to your RDP file
+
+try {
+    ; Prompt for PIN
+    Entered_PIN := InputBox("Enter your PIN to proceed:", "Security Check")
+
+    ; Verify PIN
+    if (MD5Hash(Entered_PIN.Value) = Correct_PIN_Hash) {
+        ; Launch RDP session
+        Run(RDP_File)
+
+        ; Wait for RDP session to establish
+        Sleep(15000) ; Adjust as needed
+
+        ; Simulate pressing Enter to close disconnection dialog
+        Send("{Enter}")
+        ExitApp()
+    } else {
+        MsgBox("Incorrect PIN. Access denied.", "Error", 16)
+        ExitApp()
+    }
+} catch {
+    MsgBox("Error during script execution.")
+}
+
+; Function to calculate MD5 hash
+MD5Hash(Input) {
+    try {
+        ; Calculate MD5 hash using CryptAPI
+        hCryptProv := 0, hHash := 0
+        if !DllCall("advapi32\CryptAcquireContextW", "Ptr*", &hCryptProv, "Ptr", 0, "Ptr", 0, "UInt", 1, "UInt", 0xF0000000)
+            throw Error("CryptAcquireContext failed")
+        if !DllCall("advapi32\CryptCreateHash", "Ptr", hCryptProv, "UInt", 0x8003, "Ptr", 0, "UInt", 0, "Ptr*", &hHash)
+            throw Error("CryptCreateHash failed")
+
+        inputBuffer := Buffer(StrPut(Input, "UTF-8"), 0)
+        if !DllCall("advapi32\CryptHashData", "Ptr", hHash, "Ptr", inputBuffer, "UInt", inputBuffer.Size - 1, "UInt", 0)
+            throw Error("CryptHashData failed")
+
+        hashSize := 16, hashBuffer := Buffer(hashSize, 0)
+        if !DllCall("advapi32\CryptGetHashParam", "Ptr", hHash, "UInt", 2, "Ptr", hashBuffer, "UInt*", &hashSize, "UInt", 0)
+            throw Error("CryptGetHashParam failed")
+
+        hashHex := ""
+        Loop hashSize {
+            byte := NumGet(hashBuffer, A_Index - 1, "UChar")
+            hashHex .= Format("{:02X}", byte)
+        }
+
+        ; Clean up
+        DllCall("advapi32\CryptDestroyHash", "Ptr", hHash)
+        DllCall("advapi32\CryptReleaseContext", "Ptr", hCryptProv, "UInt", 0)
+        return StrLower(hashHex)
+    } catch as err {
+        MsgBox("Hash calculation error: " err.Message)
+        return ""
+    }
+}
